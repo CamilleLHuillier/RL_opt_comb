@@ -1,3 +1,5 @@
+import random
+
 import torch
 
 import networkx as nx
@@ -15,3 +17,12 @@ def get_adjacency_matrix(graph: nx.Graph):
             adj_matrix[u, v] = 1
             adj_matrix[v, u] = 1
     return torch.Tensor(adj_matrix)
+
+
+def draw_graph(n_nodes: int = 10):
+    if random.random() < 0.33:
+        return nx.erdos_renyi_graph(n=n_nodes, p=0.15)
+    elif random.random() < 0.66:
+        return nx.powerlaw_cluster_graph(n=n_nodes, m=4, p=0.05)
+    else:
+        return nx.barabasi_albert_graph(n=n_nodes, m=4)

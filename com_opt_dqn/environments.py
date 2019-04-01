@@ -4,16 +4,23 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 import networkx as nx
 
+from graph_utils import draw_graph
 
 Env_transition = namedtuple('Environment_transition', ('s_t', 'a', 's_tp1', 'r', 'cum_r_t', 'is_terminated'))
 
 
 class Environment:
 
-    def __init__(self, name: str, n_min=5, n_max=20, p_edge=0.15):
+    def __init__(self, name: str, n_min: int = 5, n_max: int = 20, graph: nx.Graph = None):
         self.name = name
-        self.n_nodes = random.randint(n_min, n_max)
-        self.graph = nx.erdos_renyi_graph(self.n_nodes, p_edge)
+
+        if graph:
+            self.graph = graph
+            self.n_nodes = graph.number_of_nodes()
+        else:
+            self.n_nodes = random.randint(n_min, n_max)
+            self.graph = draw_graph(self.n_nodes)
+
         self.s = []
         self.v_bar = list(range(self.n_nodes))
 
@@ -25,7 +32,7 @@ class Environment:
         old_state = self.s.copy()
         self.v_bar.remove(node)
         self.s.append(node)
-        transition = Env_transition(s_t=old_state, a=node, s_tp1=self.s.copy(), r=-1, cum_r_t= cum_r_t,
+        transition = Env_transition(s_t=old_state, a=node, s_tp1=self.s.copy(), r=-1, cum_r_t=cum_r_t,
                                     is_terminated=self.is_terminated())
         return transition
 

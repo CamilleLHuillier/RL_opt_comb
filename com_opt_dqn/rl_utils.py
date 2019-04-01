@@ -6,15 +6,22 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from environments import MVCEnvironment
+from graph_utils import draw_graph, get_adjacency_matrix
+
 
 class Struc2Vec(nn.Module):
 
     def __init__(self, p: int = 64):
         super(Struc2Vec, self).__init__()
-        self.theta1 = torch.randn((1, p), requires_grad=True)
-        self.theta2 = torch.randn((p, p), requires_grad=True)
-        self.theta3 = torch.randn((p, p), requires_grad=True)
-        self.theta4 = torch.randn((1, 1, p), requires_grad=True)
+        self.theta1 = torch.Tensor(np.random.randn(*(1, p)) * 0.01)
+        self.theta1.requires_grad = True
+        self.theta2 = torch.Tensor(np.random.randn(*(p, p)) * 0.01)
+        self.theta2.requires_grad = True
+        self.theta3 = torch.Tensor(np.random.randn(*(p, p)) * 0.01)
+        self.theta3.requires_grad = True
+        self.theta4 = torch.Tensor(np.random.randn(*(1, 1, p)) * 0.01)
+        self.theta4.requires_grad = True
 
     def forward(self, x: torch.Tensor, mu: torch.Tensor, w: torch.Tensor, adj_mat: torch.Tensor):
         t1 = self.theta1.mul(x)  # (N, p)
@@ -62,9 +69,12 @@ class DQN(nn.Module):
 
     def __init__(self, emb_dim=64):
         super().__init__()
-        self.theta5 = torch.randn((2 * emb_dim, 1), requires_grad=True)
-        self.theta6 = torch.randn((emb_dim, emb_dim), requires_grad=True)
-        self.theta7 = torch.randn((emb_dim, emb_dim), requires_grad=True)
+        self.theta5 = torch.Tensor(np.random.randn(*(2 * emb_dim, 1))*0.01)
+        self.theta5.requires_grad = True
+        self.theta6 = torch.Tensor(np.random.randn(*(emb_dim, emb_dim)) * 0.01)
+        self.theta6.requires_grad = True
+        self.theta7 = torch.Tensor(np.random.randn(*(emb_dim, emb_dim)) * 0.01)
+        self.theta7.requires_grad = True
 
     def forward(self, mu: torch.Tensor):
         t1 = mu.sum(dim=(0,)).repeat((mu.shape[0], 1))
@@ -76,3 +86,32 @@ class DQN(nn.Module):
         t3 = F.relu(t3)
         t3 = t3.mm(self.theta5)  # (N, 1)
         return t3
+
+
+class Test:
+
+    def __init__(self, n_graphs: int = 100, n_nodes_max: int = 200):
+        np.random.seed(1234)
+
+        self.graphs = []
+
+        for i in range(n_graphs):
+            n_nodes = random.randint(10, n_nodes_max)
+            graph = draw_graph(n_nodes=n_nodes)
+            self.graphs.append(graph)
+
+    def evaluate_policy(self, agent):
+        cumulated_reward = 0
+
+        for graph in self.graphs:
+            env = MVCEnvironment(name='test', graph=graph)
+            adj_mat = get_adjacency_matrix(graph=graph)
+            weights = adj_mat
+
+            while not env.is_terminated():
+                best_action = agent.pick_action(s=env.s, v_bar=env.v_bar, w=weights, adj_mat=adj_mat, train=False)
+                _ = env.make_transition(best_action)
+
+            cumulated_reward += env.get_cumulated_reward()
+
+        return cumulated_reward
